@@ -1,0 +1,8 @@
+graph LR
+    APP[Client Application] --> SDK[Analytics SDK]
+    SDK --> TRACK[Track Events]
+    SDK --> IDENTIFY[Identify Users]
+    TRACK --> API[Analytics API]
+    IDENTIFY --> API
+    API --> DB[Analytics Database]
+
