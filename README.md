@@ -29,13 +29,7 @@ O principal objetivo deste projeto é **fornecer um SDK completo e bem documenta
 - **Testes Incluídos**: Módulos de código validados através de testes unitários e de integração, garantindo a correção e a robustez das implementações.
 - **Abordagem Didática**: Conteúdo apresentado de forma didática, ideal para aprendizado e referência, com explicações claras sobre os conceitos e a aplicação prática.
 
-### 📊 Visualização
 
-![TypeScript Analytics SDK Architecture](images/typescript_enterprise_analytics_sdk.png)
-
-*Diagrama ilustrativo da arquitetura do SDK de Analytics, destacando os principais módulos e o fluxo de dados.*
-
----
 
 ## 🇬🇧 Enterprise Analytics SDK with TypeScript
 

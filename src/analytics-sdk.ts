@@ -1,70 +1,96 @@
+
 /**
  * TypeScript Enterprise Analytics SDK
  * Author: Gabriel Demetrios Lafis
  * Year: 2025
  */
 
-interface AnalyticsEvent {
-  eventName: string;
-  timestamp: Date;
-  userId?: string;
-  properties?: Record<string, any>;
-}
-
-interface AnalyticsConfig {
-  apiKey: string;
-  endpoint: string;
-  batchSize?: number;
-}
+interface EventProperties extends Record<string, any> {}
 
 class AnalyticsSDK {
-  private config: AnalyticsConfig;
-  private eventQueue: AnalyticsEvent[] = [];
+    public appName: string;
+    private globalProperties: EventProperties = {};
+    private trackingEnabled: boolean = true;
 
-  constructor(config: AnalyticsConfig) {
-    this.config = {
-      ...config,
-      batchSize: config.batchSize || 10
-    };
-  }
-
-  track(eventName: string, properties?: Record<string, any>, userId?: string): void {
-    const event: AnalyticsEvent = {
-      eventName,
-      timestamp: new Date(),
-      userId,
-      properties
-    };
-
-    this.eventQueue.push(event);
-    console.log(`Event tracked: ${eventName}`);
-
-    if (this.eventQueue.length >= this.config.batchSize!) {
-      this.flush();
+    constructor(appName: string) {
+        this.appName = appName;
+        console.log(`Analytics SDK initialized for app: ${this.appName}`);
     }
-  }
 
-  flush(): void {
-    if (this.eventQueue.length === 0) return;
+    private log(type: string, name: string, properties?: EventProperties) {
+        if (this.trackingEnabled) {
+            const allProperties = { ...this.globalProperties, ...properties };
+            console.log(`${type}:`, name, allProperties);
+            // Em um cenário real, aqui haveria o envio para um backend de analytics
+        }
+    }
 
-    console.log(`Flushing ${this.eventQueue.length} events to ${this.config.endpoint}`);
-    // Simulate API call
-    this.eventQueue = [];
-  }
+    public captureEvent(eventName: string, properties?: EventProperties): void {
+        this.validateProperties(properties);
+        this.log("Event", eventName, properties);
+    }
 
-  identify(userId: string, traits?: Record<string, any>): void {
-    console.log(`User identified: ${userId}`, traits);
-  }
+    public capturePageView(pagePath: string, properties?: EventProperties): void {
+        this.validateProperties(properties);
+        this.log("Page View", pagePath, properties);
+    }
+
+    public identifyUser(userId: string, traits?: EventProperties): void {
+        console.log("User Identified:", userId, traits);
+        // Em um cenário real, aqui haveria o envio para um sistema de CRM/CDP
+    }
+
+    public setGlobalProperties(properties: EventProperties): void {
+        this.globalProperties = { ...this.globalProperties, ...properties };
+        console.log("Global properties set:", this.globalProperties);
+    }
+
+    public trackPerformance(metricName: string, value: number, properties?: EventProperties): void {
+        this.log("Performance Metric", metricName, { value, ...properties });
+    }
+
+    public disableTracking(): void {
+        this.trackingEnabled = false;
+        console.log("Tracking disabled.");
+    }
+
+    public enableTracking(): void {
+        this.trackingEnabled = true;
+        console.log("Tracking enabled.");
+    }
+
+    private validateProperties(properties?: EventProperties): void {
+        if (properties) {
+            for (const key in properties) {
+                if (properties.hasOwnProperty(key)) {
+                    const value = properties[key];
+                    if (value === null || typeof value === 'undefined') {
+                        console.warn(`Warning: Event property ${key} has a null or undefined value.`);
+                    }
+                }
+            }
+        }
+    }
 }
 
-// Example usage
-const analytics = new AnalyticsSDK({
-  apiKey: 'demo-key',
-  endpoint: 'https://api.analytics.example.com'
-});
+// Exemplo de uso (para demonstração, não para ser executado em produção)
+if (require.main === module) {
+    const sdk = new AnalyticsSDK("MyEnterpriseApp");
 
-analytics.identify('user123', { name: 'John Doe', email: 'john@example.com' });
-analytics.track('page_view', { page: '/home' }, 'user123');
-analytics.track('button_click', { button: 'signup' }, 'user123');
+    sdk.setGlobalProperties({ environment: "development", version: "1.0.0" });
 
-export { AnalyticsSDK, AnalyticsEvent, AnalyticsConfig };
+    sdk.identifyUser("user123", { email: "user@example.com", plan: "premium" });
+
+    sdk.captureEvent("product_viewed", { productId: "P123", category: "Electronics" });
+    sdk.capturePageView("/products/P123", { referrer: "homepage" });
+
+    sdk.trackPerformance("page_load_time", 1500);
+
+    sdk.disableTracking();
+    sdk.captureEvent("should_not_be_tracked");
+    sdk.enableTracking();
+    sdk.captureEvent("should_be_tracked_again");
+}
+
+export { AnalyticsSDK };
+
