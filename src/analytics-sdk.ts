@@ -124,7 +124,7 @@ class AnalyticsSDK {
                 this.logDebug('Persistent data loaded.');
             }
         } catch (error) {
-            console.error('AnalyticsSDK: Failed to load persistent data from localStorage', error);
+            this.logDebug('AnalyticsSDK: Failed to load persistent data from localStorage', error);
         }
     }
 
@@ -139,7 +139,7 @@ class AnalyticsSDK {
             localStorage.setItem(this.storageKey, JSON.stringify(dataToStore));
             this.logDebug('Persistent data saved.');
         } catch (error) {
-            console.error('AnalyticsSDK: Failed to save persistent data to localStorage', error);
+            this.logDebug('AnalyticsSDK: Failed to save persistent data to localStorage', error);
         }
     }
 
@@ -149,7 +149,7 @@ class AnalyticsSDK {
             localStorage.removeItem(this.storageKey);
             this.logDebug('Persistent data cleared.');
         } catch (error) {
-            console.error('AnalyticsSDK: Failed to clear persistent data from localStorage', error);
+            this.logDebug("AnalyticsSDK: Failed to clear persistent data from localStorage", error);
         }
     }
 
@@ -220,7 +220,7 @@ class AnalyticsSDK {
             });
             // Em um cenário real, aqui haveria o envio para um backend de analytics
             // Ex: fetch("/api/analytics", { method: "POST", body: JSON.stringify(processedEvents) });
-            this.logDebug(`Successfully flushed ${processedEvents.length} events.`);
+            // this.logDebug(`Successfully flushed ${processedEvents.length} events.`);
         });
     }
 
@@ -271,7 +271,7 @@ class AnalyticsSDK {
                         break;
                 }
             } catch (error) {
-                console.error(`AnalyticsSDK: Plugin ${plugin.name} failed to process event type ${event.type}:`, error);
+                this.logDebug(`AnalyticsSDK: Plugin ${plugin.name} failed to process event type ${event.type}:`, error);
             }
         });
     }
@@ -349,7 +349,7 @@ class AnalyticsSDK {
                 plugin.load(this);
                 this.logDebug(`Plugin ${plugin.name} loaded.`);
             } catch (error) {
-                console.error(`AnalyticsSDK: Failed to load plugin ${plugin.name}:`, error);
+                this.logDebug(`AnalyticsSDK: Failed to load plugin ${plugin.name}:`, error);
             }
         }
         this.logDebug(`Plugin ${plugin.name} added.`);
@@ -415,9 +415,9 @@ class AnalyticsSDK {
 // ts-node analytics-sdk.ts
 
 if (require.main === module) {
-    console.log("\n===========================================");
-    console.log("TypeScript Enterprise Analytics SDK - Advanced Example");
-    console.log("===========================================");
+    this.logDebug("\n===========================================");
+    this.logDebug("TypeScript Enterprise Analytics SDK - Advanced Example");
+    this.logDebug("===========================================");
 
     // 1. Inicialização do SDK
     const sdk = new AnalyticsSDK({
@@ -438,7 +438,7 @@ if (require.main === module) {
     sdk.identify("user_456", { email: "john.doe@example.com", plan: "enterprise", company: "Acme Corp" });
 
     // 4. Rastreamento de Eventos e Page Views
-    console.log("\n--- Capturando Eventos e Page Views ---");
+    this.logDebug("\n--- Capturando Eventos e Page Views ---");
     sdk.track("Product Viewed", { productId: "PROD-001", category: "Electronics", price: 999.99 });
     sdk.page("Product Detail Page", { path: "/products/PROD-001", title: "Laptop X1" });
     sdk.track("Add to Cart", { productId: "PROD-001", quantity: 1 }); // Deve acionar o flush
@@ -452,51 +452,51 @@ if (require.main === module) {
     sdk.alias("new_user_id_456", "user_456");
 
     // 7. Middleware em Ação
-    console.log("\n--- Adicionando Middleware ---");
+    this.logDebug("\n--- Adicionando Middleware ---");
     sdk.use((event, next) => {
-        console.log(`[Middleware 1] Processando evento: ${event.type}`);
+        this.logDebug(`[Middleware 1] Processando evento: ${event.type}`);
         event.context.processedByMiddleware1 = true;
         next(event);
     });
     sdk.use((event, next) => {
-        console.log(`[Middleware 2] Adicionando ID de rastreamento: ${event.messageId}`);
+        this.logDebug(`[Middleware 2] Adicionando ID de rastreamento: ${event.messageId}`);
         event.properties = { ...event.properties, trackingId: event.messageId };
         next(event);
     });
     sdk.track("Custom Event with Middleware", { data: "test" });
 
     // 8. Plugins em Ação (Exemplo de Plugin de Destino)
-    console.log("\n--- Adicionando Plugin de Destino ---");
+    this.logDebug("\n--- Adicionando Plugin de Destino ---");
     const consoleDestinationPlugin: Plugin = {
         name: "ConsoleLogger",
         version: "1.0.0",
         type: "destination",
-        track: (event) => console.log(`[Plugin: ConsoleLogger] TRACK event:`, event.event, event.properties),
-        page: (event) => console.log(`[Plugin: ConsoleLogger] PAGE event:`, event.name, event.properties),
-        identify: (event) => console.log(`[Plugin: ConsoleLogger] IDENTIFY event:`, event.userId, event.traits),
-        group: (event) => console.log(`[Plugin: ConsoleLogger] GROUP event:`, event.properties?.groupId, event.traits),
-        alias: (event) => console.log(`[Plugin: ConsoleLogger] ALIAS event:`, event.userId, event.properties?.oldId),
+        track: (event) => this.logDebug(`[Plugin: ConsoleLogger] TRACK event:`, event.event, event.properties),
+        page: (event) => this.logDebug(`[Plugin: ConsoleLogger] PAGE event:`, event.name, event.properties),
+        identify: (event) => this.logDebug(`[Plugin: ConsoleLogger] IDENTIFY event:`, event.userId, event.traits),
+        group: (event) => this.logDebug(`[Plugin: ConsoleLogger] GROUP event:`, event.properties?.groupId, event.traits),
+        alias: (event) => this.logDebug(`[Plugin: ConsoleLogger] ALIAS event:`, event.userId, event.properties?.oldId),
     };
     sdk.addPlugin(consoleDestinationPlugin);
     sdk.track("Event via Plugin", { source: "SDK Example" });
 
     // 9. Gerenciamento de Consentimento
-    console.log("\n--- Gerenciamento de Consentimento ---");
-    console.log("Tracking enabled initially:", sdk.isTrackingEnabled());
+    this.logDebug("\n--- Gerenciamento de Consentimento ---");
+    this.logDebug("Tracking enabled initially:", sdk.isTrackingEnabled());
     sdk.revokeConsent();
-    console.log("Tracking enabled after revoke:", sdk.isTrackingEnabled());
+    this.logDebug("Tracking enabled after revoke:", sdk.isTrackingEnabled());
     sdk.track("Event after revoke consent"); // Não deve ser rastreado
     sdk.giveConsent();
-    console.log("Tracking enabled after give consent:", sdk.isTrackingEnabled());
+    this.logDebug("Tracking enabled after give consent:", sdk.isTrackingEnabled());
     sdk.track("Event after give consent"); // Deve ser rastreado
 
     // 10. Desligamento do SDK
-    console.log("\n--- Desligando SDK ---");
+    this.logDebug("\n--- Desligando SDK ---");
     sdk.shutdown();
 
-    console.log("===========================================");
-    console.log("SDK Advanced Example Finished.");
-    console.log("===========================================");
+    this.logDebug("===========================================");
+    this.logDebug("SDK Advanced Example Finished.");
+    this.logDebug("===========================================");
 }
 
 export { AnalyticsSDK, AnalyticsEvent, EventProperties, UserTraits, GroupTraits, Context, MiddlewareFunction, Plugin };
