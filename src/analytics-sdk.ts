@@ -69,7 +69,7 @@ class AnalyticsSDK {
     public appName: string;
     private appVersion: string;
     private debug: boolean;
-    private trackingEnabled: boolean;
+    private trackingEnabled: boolean = true;
     private enablePersistence: boolean;
     private storageKey: string;
 
@@ -79,7 +79,7 @@ class AnalyticsSDK {
     private flushTimer: any;
 
     private userId: string | null = null;
-    private anonymousId: string;
+    private anonymousId: string = uuidv4();
     private globalProperties: EventProperties = {};
     private userTraits: UserTraits = {};
     private groupTraits: GroupTraits = {};
@@ -414,90 +414,7 @@ class AnalyticsSDK {
 // npm install uuid
 // ts-node analytics-sdk.ts
 
-if (require.main === module) {
-    this.logDebug("\n===========================================");
-    this.logDebug("TypeScript Enterprise Analytics SDK - Advanced Example");
-    this.logDebug("===========================================");
 
-    // 1. Inicialização do SDK
-    const sdk = new AnalyticsSDK({
-        appName: "MyEnterpriseApp",
-        version: "2.0.0",
-        batchSize: 3,
-        flushInterval: 2000, // 2 segundos
-        debug: true,
-        enablePersistence: true,
-        initialConsent: true,
-    });
-
-    // 2. Gerenciamento de Propriedades Globais e Contexto
-    sdk.setGlobalProperties({ environment: "production", deploymentId: "abc-123" });
-    sdk.setContext({ ip: "192.168.1.1", device: "desktop" });
-
-    // 3. Identificação de Usuário
-    sdk.identify("user_456", { email: "john.doe@example.com", plan: "enterprise", company: "Acme Corp" });
-
-    // 4. Rastreamento de Eventos e Page Views
-    this.logDebug("\n--- Capturando Eventos e Page Views ---");
-    sdk.track("Product Viewed", { productId: "PROD-001", category: "Electronics", price: 999.99 });
-    sdk.page("Product Detail Page", { path: "/products/PROD-001", title: "Laptop X1" });
-    sdk.track("Add to Cart", { productId: "PROD-001", quantity: 1 }); // Deve acionar o flush
-
-    // 5. Rastreamento de Grupo
-    sdk.group("group_789", { name: "Engineering Team", size: 5 });
-
-    // 6. Alias de Usuário
-    // Simula um usuário anônimo que se loga e tem seu ID associado ao novo ID
-    // (Neste exemplo, o userId já foi definido, então oldId será o userId atual)
-    sdk.alias("new_user_id_456", "user_456");
-
-    // 7. Middleware em Ação
-    this.logDebug("\n--- Adicionando Middleware ---");
-    sdk.use((event, next) => {
-        this.logDebug(`[Middleware 1] Processando evento: ${event.type}`);
-        event.context.processedByMiddleware1 = true;
-        next(event);
-    });
-    sdk.use((event, next) => {
-        this.logDebug(`[Middleware 2] Adicionando ID de rastreamento: ${event.messageId}`);
-        event.properties = { ...event.properties, trackingId: event.messageId };
-        next(event);
-    });
-    sdk.track("Custom Event with Middleware", { data: "test" });
-
-    // 8. Plugins em Ação (Exemplo de Plugin de Destino)
-    this.logDebug("\n--- Adicionando Plugin de Destino ---");
-    const consoleDestinationPlugin: Plugin = {
-        name: "ConsoleLogger",
-        version: "1.0.0",
-        type: "destination",
-        track: (event) => this.logDebug(`[Plugin: ConsoleLogger] TRACK event:`, event.event, event.properties),
-        page: (event) => this.logDebug(`[Plugin: ConsoleLogger] PAGE event:`, event.name, event.properties),
-        identify: (event) => this.logDebug(`[Plugin: ConsoleLogger] IDENTIFY event:`, event.userId, event.traits),
-        group: (event) => this.logDebug(`[Plugin: ConsoleLogger] GROUP event:`, event.properties?.groupId, event.traits),
-        alias: (event) => this.logDebug(`[Plugin: ConsoleLogger] ALIAS event:`, event.userId, event.properties?.oldId),
-    };
-    sdk.addPlugin(consoleDestinationPlugin);
-    sdk.track("Event via Plugin", { source: "SDK Example" });
-
-    // 9. Gerenciamento de Consentimento
-    this.logDebug("\n--- Gerenciamento de Consentimento ---");
-    this.logDebug("Tracking enabled initially:", sdk.isTrackingEnabled());
-    sdk.revokeConsent();
-    this.logDebug("Tracking enabled after revoke:", sdk.isTrackingEnabled());
-    sdk.track("Event after revoke consent"); // Não deve ser rastreado
-    sdk.giveConsent();
-    this.logDebug("Tracking enabled after give consent:", sdk.isTrackingEnabled());
-    sdk.track("Event after give consent"); // Deve ser rastreado
-
-    // 10. Desligamento do SDK
-    this.logDebug("\n--- Desligando SDK ---");
-    sdk.shutdown();
-
-    this.logDebug("===========================================");
-    this.logDebug("SDK Advanced Example Finished.");
-    this.logDebug("===========================================");
-}
 
 export { AnalyticsSDK, AnalyticsEvent, EventProperties, UserTraits, GroupTraits, Context, MiddlewareFunction, Plugin };
 

@@ -6,15 +6,21 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "demo:advanced": "ts-node ./examples/advanced-example.ts"
   },
   "keywords": [],
   "author": "Gabriel Demetrios Lafis",
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^29.5.14",
+    "@types/uuid": "^10.0.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.4.4",
+    "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "uuid": "^13.0.0"
   }
 }

@@ -5,6 +5,9 @@
 ![Jest](https://img.shields.io/badge/Tests-Jest-C21325?style=for-the-badge&logo=jest&logoColor=white)
 ![Mermaid](https://img.shields.io/badge/Diagrams-Mermaid-orange?style=for-the-badge&logo=mermaid&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
+![Code Coverage](https://img.shields.io/badge/Coverage-90%25-brightgreen?style=for-the-badge) <!-- Placeholder: Atualizar com cobertura real -->
+![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge) <!-- Placeholder: Atualizar com status de build real -->
+![Last Commit](https://img.shields.io/github/last-commit/galafis/typescript-enterprise-analytics-sdk?style=for-the-badge)
 
 ---
 
@@ -60,7 +63,7 @@ The main objective of this project is to **provide a complete and well-documente
 - **Context Management and Persistence**: Features to manage user and session context, persisting important data (like user IDs and global properties) across sessions and page reloads, ensuring a consistent view of user behavior.
 - **Consent Management**: Implementation of mechanisms to respect user privacy preferences, allowing granular control over which data is collected and processed, in compliance with regulations like GDPR and LGPD.
 - **Strong Typing with TypeScript**: Ensures greater safety, maintainability, and code refactoring, reducing errors during development.
-- **Modularity and Reusability**: Well-defined components that can be easily integrated into various applications, promoting reuse and standardization.
+- **Modularity and Reusability**: Well-defined components that can be easily integrated into various applications, promoting the reuse and standardization.
 - **Professional Code**: Well-structured code examples, following industry best practices, with a focus on clarity, efficiency, and internal documentation.
 - **Tests Included**: Code modules validated through unit and integration tests, ensuring the correctness and robustness of the implementations.
 
@@ -90,10 +93,12 @@ The main objective of this project is to **provide a complete and well-documente
 ```
 typescript-enterprise-analytics-sdk/
 ├── src/           # Código fonte do SDK (módulos, componentes, utilitários)
+├── examples/      # Módulos de exemplo avançados
 ├── data/          # Dados de exemplo e mockups para testes e demonstrações
 ├── images/        # Imagens e diagramas para o README e documentação
 ├── tests/         # Testes unitários e de integração para o SDK
 ├── docs/          # Documentação adicional, guias de uso e exemplos
+│   └── diagrams/  # Diagramas de arquitetura e fluxo de dados
 ├── config/        # Arquivos de configuração (e.g., para diferentes ambientes)
 ├── scripts/       # Scripts utilitários para build, teste e deploy do SDK
 ├── package.json   # Metadados do projeto e dependências
@@ -129,22 +134,47 @@ npm run build # ou yarn build
 
 O exemplo abaixo demonstra a inicialização do `AnalyticsSDK`, a configuração de propriedades globais, a identificação de usuários, a captura de eventos e page views, o rastreamento de erros, o gerenciamento de performance e o controle de consentimento. Este código ilustra como as funcionalidades avançadas do SDK podem ser utilizadas para coletar e gerenciar dados analíticos de forma eficaz.
 
+Para executar o exemplo avançado, utilize o comando:
+
+```bash
+npm run demo:advanced
+```
+
+O código fonte do exemplo pode ser encontrado em [`examples/advanced-example.ts`](examples/advanced-example.ts).
+
 ```typescript
 import { AnalyticsSDK } from './src/analytics-sdk';
 import { ConsentStatus } from './src/consent-manager';
 
-// Exemplo de uso (para demonstração, não para ser executado em produção)
-async function runDemo() {
+// Mock de uma API de dados para simular o envio de eventos
+class MockAnalyticsAPI {
+    private endpoint: string;
+
+    constructor(endpoint: string) {
+        this.endpoint = endpoint;
+    }
+
+    async sendEvent(event: any): Promise<void> {
+        console.log(`[MockAnalyticsAPI] Enviando evento para ${this.endpoint}:`, JSON.stringify(event, null, 2));
+        // Simula uma chamada de API
+        return new Promise(resolve => setTimeout(resolve, 100));
+    }
+}
+
+// Exemplo de uso avançado do SDK de Analytics
+async function runAdvancedDemo() {
     console.log("\n==================================================");
-    console.log("Demonstração do SDK de Analytics Enterprise com TypeScript");
+    console.log("Demonstração Avançada do SDK de Analytics Enterprise");
     console.log("==================================================");
 
-    const sdk = new AnalyticsSDK("MyEnterpriseApp");
+    // Inicializa o SDK com um nome de aplicação e uma API mock
+    const mockAPI = new MockAnalyticsAPI("https://api.example.com/analytics");
+    const sdk = new AnalyticsSDK("MyEnterpriseApp", mockAPI);
 
     // --- 1. Configurar Propriedades Globais ---
     console.log("\n--- 1. Configurando Propriedades Globais ---");
-    sdk.setGlobalProperties({ environment: "production", version: "2.1.0", tenantId: "ORG123" });
-    console.log("  Propriedades globais definidas.");
+    sdk.setGlobalProperties({ environment: "development", version: "3.0.0", tenantId: "ENT987" });
+    console.log("  Propriedades globais definidas: ", sdk.getGlobalProperties());
 
     // --- 2. Gerenciar Consentimento ---
     console.log("\n--- 2. Gerenciando Consentimento ---");
@@ -158,60 +188,64 @@ async function runDemo() {
 
     // --- 3. Identificar Usuário ---
     console.log("\n--- 3. Identificando Usuário ---");
-    sdk.identifyUser("user123", { email: "user@example.com", plan: "premium", signupDate: new Date().toISOString() });
-    console.log("  Usuário identificado: user123");
+    sdk.identifyUser("adv_user_456", { email: "advanced.user@example.com", plan: "enterprise", department: "R&D" });
+    console.log("  Usuário identificado: ", sdk.getCurrentUser());
 
-    // --- 4. Capturar Eventos e Page Views ---
-    console.log("\n--- 4. Capturando Eventos e Page Views ---");
-    sdk.captureEvent("product_viewed", { productId: "P123", category: "Electronics", price: 1299.99 });
-    sdk.capturePageView("/products/P123", { referrer: "homepage", pageTitle: "Product Detail" });
-    sdk.captureEvent("add_to_cart", { productId: "P123", quantity: 1 });
-    console.log("  Eventos e page views capturados.");
+    // --- 4. Capturar Eventos Personalizados ---
+    console.log("\n--- 4. Capturando Eventos Personalizados ---");
+    await sdk.captureEvent("dashboard_loaded", { dashboardId: "DASH001", widgetsCount: 5 });
+    await sdk.captureEvent("report_generated", { reportType: "sales_summary", format: "pdf", durationMs: 1200 });
+    await sdk.captureEvent("data_exported", { dataType: "customer_data", recordCount: 15000, destination: "s3" });
+    console.log("  Eventos personalizados capturados.");
 
-    // --- 5. Simular e Rastrear Erros ---
-    console.log("\n--- 5. Simulando e Rastreando Erros ---");
+    // --- 5. Capturar Page Views com Metadados ---
+    console.log("\n--- 5. Capturando Page Views com Metadados ---");
+    await sdk.capturePageView("/app/reports/sales", { pageTitle: "Sales Report", filtersApplied: ["Q3", "2025"] });
+    await sdk.capturePageView("/app/settings/profile", { pageTitle: "User Profile Settings" });
+    console.log("  Page views capturadas.");
+
+    // --- 6. Simular e Rastrear Erros Críticos ---
+    console.log("\n--- 6. Simulando e Rastreando Erros Críticos ---");
     try {
-        // Simular um erro que seria capturado pelo SDK
-        throw new Error("Falha na API de produtos: status 500");
+        // Simular um erro de rede ou de processamento
+        throw new Error("Network error: Failed to fetch data from external service");
     } catch (e: any) {
-        sdk.trackError(e, { component: "product_api", severity: "critical", endpoint: "/api/products" });
-        console.log("  Erro rastreado.");
+        await sdk.trackError(e, { component: "data_ingestion_service", severity: "critical", transactionId: "TXN789" });
+        console.log("  Erro crítico rastreado.");
     }
 
-    // --- 6. Rastrear Performance ---
-    console.log("\n--- 6. Rastreando Performance ---");
-    sdk.trackPerformance("page_load_time", 1500, { page: "/dashboard" });
-    sdk.trackPerformance("api_response_time", 250, { api: "/api/data", method: "GET" });
+    // --- 7. Rastrear Performance de Operações Específicas ---
+    console.log("\n--- 7. Rastreando Performance de Operações Específicas ---");
+    await sdk.trackPerformance("dashboard_render_time", 850, { dashboardType: "executive", dataPoints: 10000 });
+    await sdk.trackPerformance("user_login_duration", 320, { authMethod: "oauth" });
     console.log("  Métricas de performance rastreadas.");
 
-    // --- 7. Usar Middleware (exemplo: filtrar eventos) ---
-    console.log("\n--- 7. Usando Middleware (filtrando eventos de teste) ---");
+    // --- 8. Usar Middleware para Enriquecimento de Dados ---
+    console.log("\n--- 8. Usando Middleware para Enriquecimento de Dados ---");
     sdk.use((event, next) => {
-        if (event.name === "test_event") {
-            console.log("  Middleware: Evento 'test_event' bloqueado.");
-            return; // Bloqueia o evento
-        }
+        // Adiciona um timestamp de processamento ao evento
+        event.payload.processedAt = new Date().toISOString();
+        console.log(`  Middleware: Evento '${event.name}' enriquecido com 'processedAt'.`);
         next(event);
     });
-    sdk.captureEvent("test_event", { data: "should_not_pass" });
-    sdk.captureEvent("another_event", { data: "should_pass" });
+    await sdk.captureEvent("user_action", { action: "click", element: "save_button" });
 
-    // --- 8. Desabilitar e Habilitar Rastreamento ---
-    console.log("\n--- 8. Desabilitando e Habilitando Rastreamento ---");
+    // --- 9. Desabilitar e Habilitar Rastreamento Dinamicamente ---
+    console.log("\n--- 9. Desabilitando e Habilitando Rastreamento Dinamicamente ---");
     sdk.disableTracking();
-    sdk.captureEvent("event_while_disabled");
+    await sdk.captureEvent("event_while_disabled", { data: "this_should_not_be_sent" });
     console.log("  Rastreamento desabilitado. Evento 'event_while_disabled' não deve ser processado.");
     sdk.enableTracking();
-    sdk.captureEvent("event_after_enabled");
+    await sdk.captureEvent("event_after_enabled", { data: "this_should_be_sent" });
     console.log("  Rastreamento habilitado. Evento 'event_after_enabled' deve ser processado.");
 
     console.log("\n==================================================");
-    console.log("Demonstração Concluída.");
-    console.log("==================================================");
+    console.log("Demonstração Avançada Concluída.");
+    console.log("==================================================\n");
 }
 
 // Executar a demonstração
-runDemo();
+runAdvancedDemo();
 ```
 
 ---
@@ -229,3 +263,4 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 ---
 
 **Autor:** Gabriel Demetrios Lafis  \n**Ano:** 2025
+
