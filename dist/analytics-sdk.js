@@ -9,21 +9,29 @@
  * de plugins para extensibilidade. Inclui persistência de dados e gerenciamento de consentimento.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AnalyticsSDK = void 0;
+exports.AnalyticsSDK = exports.ConsentStatus = void 0;
 const uuid_1 = require("uuid");
+// --- Interfaces e Tipos --- //
+var ConsentStatus;
+(function (ConsentStatus) {
+    ConsentStatus["GRANTED"] = "granted";
+    ConsentStatus["DENIED"] = "denied";
+    ConsentStatus["UNKNOWN"] = "unknown";
+})(ConsentStatus || (exports.ConsentStatus = ConsentStatus = {}));
 // --- Classe Principal do SDK --- //
 class AnalyticsSDK {
     constructor(options) {
         this.trackingEnabled = true;
         this.eventQueue = [];
         this.userId = null;
-        this.anonymousId = (0, uuid_1.v4)();
+        this.anonymousId = '';
         this.globalProperties = {};
         this.userTraits = {};
         this.groupTraits = {};
         this.context = {};
         this.middleware = [];
         this.plugins = [];
+        this.consentPreferences = {};
         this.appName = options.appName;
         this.appVersion = options.version || '1.0.0';
         this.batchSize = options.batchSize || 10;
@@ -35,8 +43,8 @@ class AnalyticsSDK {
         this.loadPersistentData();
         if (!this.anonymousId) {
             this.anonymousId = (0, uuid_1.v4)();
-            this.savePersistentData();
         }
+        this.savePersistentData();
         this.updateContext();
         this.startFlushTimer();
         this.logDebug(`Analytics SDK initialized for app: ${this.appName} (v${this.appVersion})`);
@@ -204,13 +212,15 @@ class AnalyticsSDK {
     track(event, properties, integrations) {
         if (!this.trackingEnabled)
             return;
-        const analyticsEvent = Object.assign(Object.assign({}, this.createBaseEvent('track', integrations)), { event, properties });
+        const mergedProperties = Object.assign(Object.assign({}, this.globalProperties), properties);
+        const analyticsEvent = Object.assign(Object.assign({}, this.createBaseEvent('track', integrations)), { event, properties: mergedProperties, payload: mergedProperties });
         this.enqueueEvent(analyticsEvent);
     }
     page(name, properties, integrations) {
         if (!this.trackingEnabled)
             return;
-        const analyticsEvent = Object.assign(Object.assign({}, this.createBaseEvent('page', integrations)), { name, properties });
+        const mergedProperties = Object.assign(Object.assign({}, this.globalProperties), properties);
+        const analyticsEvent = Object.assign(Object.assign({}, this.createBaseEvent('page', integrations)), { name, properties: mergedProperties, payload: mergedProperties });
         this.enqueueEvent(analyticsEvent);
     }
     identify(userId, traits, integrations) {
@@ -244,6 +254,51 @@ class AnalyticsSDK {
     setGlobalProperties(properties) {
         this.globalProperties = Object.assign(Object.assign({}, this.globalProperties), properties);
         this.logDebug('Global properties set:', this.globalProperties);
+    }
+    getGlobalProperties() {
+        return Object.assign({}, this.globalProperties);
+    }
+    // --- Métodos Adicionais de Conveniência --- //
+    /**
+     * Alias para track() - mantém compatibilidade com README
+     */
+    captureEvent(event, properties, integrations) {
+        this.track(event, properties, integrations);
+    }
+    /**
+     * Alias para page() - mantém compatibilidade com README
+     */
+    capturePageView(name, properties, integrations) {
+        this.page(name, properties, integrations);
+    }
+    /**
+     * Alias para identify() - mantém compatibilidade com README
+     */
+    identifyUser(userId, traits, integrations) {
+        this.identify(userId, traits, integrations);
+    }
+    /**
+     * Rastreia erros como eventos
+     */
+    trackError(error, properties, integrations) {
+        this.track('error', Object.assign({ message: error.message, stack: error.stack, name: error.name }, properties), integrations);
+    }
+    /**
+     * Rastreia métricas de performance
+     */
+    trackPerformance(metricName, value, properties, integrations) {
+        this.track('performance_metric', Object.assign({ metricName,
+            value }, properties), integrations);
+    }
+    /**
+     * Retorna informações do usuário atual
+     */
+    getCurrentUser() {
+        return {
+            userId: this.userId,
+            anonymousId: this.anonymousId,
+            traits: Object.assign({}, this.userTraits)
+        };
     }
     // --- Gerenciamento de Middleware --- //
     use(middleware) {
@@ -279,6 +334,27 @@ class AnalyticsSDK {
     hasConsent() {
         return this.consentGiven;
     }
+    /**
+     * Atualiza preferências de consentimento granular
+     */
+    updateConsent(preferences) {
+        this.consentPreferences = Object.assign(Object.assign({}, this.consentPreferences), preferences);
+        // Se pelo menos uma categoria está granted, damos consentimento geral
+        const hasAnyGranted = Object.values(this.consentPreferences).some(status => status === ConsentStatus.GRANTED);
+        if (hasAnyGranted && !this.consentGiven) {
+            this.giveConsent();
+        }
+        else if (!hasAnyGranted && this.consentGiven) {
+            this.revokeConsent();
+        }
+        this.logDebug('Consent preferences updated:', this.consentPreferences);
+    }
+    /**
+     * Retorna o status de consentimento atual
+     */
+    getConsentStatus() {
+        return Object.assign({}, this.consentPreferences);
+    }
     // --- Controle de Rastreamento --- //
     disableTracking() {
         this.trackingEnabled = false;
@@ -300,7 +376,8 @@ class AnalyticsSDK {
     // --- Utilitários --- //
     logDebug(...args) {
         if (this.debug) {
-            console.log(`[AnalyticsSDK Debug]`, ...args);
+            const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+            console.log(`[AnalyticsSDK Debug] ${message}`);
         }
     }
     shutdown() {
@@ -311,3 +388,7 @@ class AnalyticsSDK {
     }
 }
 exports.AnalyticsSDK = AnalyticsSDK;
+// --- Exemplo de Uso (para demonstração) ---
+// Para executar este exemplo, você precisará de um ambiente Node.js e instalar 'uuid':
+// npm install uuid
+// ts-node analytics-sdk.ts

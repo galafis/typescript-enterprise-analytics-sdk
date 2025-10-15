@@ -12,10 +12,29 @@ import { v4 as uuidv4 } from 'uuid';
 
 // --- Interfaces e Tipos --- //
 
-interface EventProperties extends Record<string, any> {}
-interface UserTraits extends EventProperties {}
-interface GroupTraits extends EventProperties {}
-interface Context extends EventProperties {
+export enum ConsentStatus {
+    GRANTED = 'granted',
+    DENIED = 'denied',
+    UNKNOWN = 'unknown',
+}
+
+export interface ConsentPreferences {
+    analytics?: ConsentStatus;
+    marketing?: ConsentStatus;
+    personalization?: ConsentStatus;
+    [key: string]: ConsentStatus | undefined;
+}
+
+export interface UserInfo {
+    userId: string | null;
+    anonymousId: string;
+    traits: UserTraits;
+}
+
+export interface EventProperties extends Record<string, any> {}
+export interface UserTraits extends EventProperties {}
+export interface GroupTraits extends EventProperties {}
+export interface Context extends EventProperties {
     userAgent?: string;
     locale?: string;
     timezone?: string;
@@ -24,7 +43,7 @@ interface Context extends EventProperties {
     [key: string]: any;
 }
 
-interface AnalyticsEvent {
+export interface AnalyticsEvent {
     type: 'track' | 'page' | 'identify' | 'group' | 'alias';
     event?: string; // Para type: 'track'
     name?: string;  // Para type: 'page'
@@ -36,11 +55,12 @@ interface AnalyticsEvent {
     timestamp: string;
     messageId: string;
     integrations?: Record<string, boolean>;
+    payload?: EventProperties; // Added for middleware compatibility
 }
 
-type MiddlewareFunction = (event: AnalyticsEvent, next: (event: AnalyticsEvent) => void) => void;
+export type MiddlewareFunction = (event: AnalyticsEvent, next: (event: AnalyticsEvent) => void) => void;
 
-interface Plugin {
+export interface Plugin {
     name: string;
     version: string;
     type: 'destination' | 'enrichment' | 'utility';
@@ -53,7 +73,7 @@ interface Plugin {
 }
 
 // --- Configurações do SDK --- //
-interface AnalyticsSDKOptions {
+export interface AnalyticsSDKOptions {
     appName: string;
     version?: string;
     batchSize?: number;
@@ -65,7 +85,7 @@ interface AnalyticsSDKOptions {
 }
 
 // --- Classe Principal do SDK --- //
-class AnalyticsSDK {
+export class AnalyticsSDK {
     public appName: string;
     private appVersion: string;
     private debug: boolean;
@@ -79,7 +99,7 @@ class AnalyticsSDK {
     private flushTimer: any;
 
     private userId: string | null = null;
-    private anonymousId: string = uuidv4();
+    private anonymousId: string = '';
     private globalProperties: EventProperties = {};
     private userTraits: UserTraits = {};
     private groupTraits: GroupTraits = {};
@@ -89,6 +109,7 @@ class AnalyticsSDK {
     private plugins: Plugin[] = [];
 
     private consentGiven: boolean;
+    private consentPreferences: ConsentPreferences = {};
 
     constructor(options: AnalyticsSDKOptions) {
         this.appName = options.appName;
@@ -103,8 +124,8 @@ class AnalyticsSDK {
         this.loadPersistentData();
         if (!this.anonymousId) {
             this.anonymousId = uuidv4();
-            this.savePersistentData();
         }
+        this.savePersistentData();
 
         this.updateContext();
         this.startFlushTimer();
@@ -205,7 +226,7 @@ class AnalyticsSDK {
         }
     }
 
-    private flushEvents(): void {
+    public flushEvents(): void {
         if (this.eventQueue.length === 0) {
             return;
         }
@@ -291,19 +312,40 @@ class AnalyticsSDK {
     }
 
     public track(event: string, properties?: EventProperties, integrations?: Record<string, boolean>): void {
-        if (!this.trackingEnabled) return;
-        const analyticsEvent = { ...this.createBaseEvent('track', integrations), event, properties };
+        if (!this.trackingEnabled || !this.consentGiven) {
+            this.logDebug('Event not queued due to missing consent:', event);
+            return;
+        }
+        const mergedProperties = { ...this.globalProperties, ...properties };
+        const analyticsEvent = { 
+            ...this.createBaseEvent('track', integrations), 
+            event, 
+            properties: mergedProperties,
+            payload: mergedProperties 
+        };
         this.enqueueEvent(analyticsEvent);
     }
 
     public page(name?: string, properties?: EventProperties, integrations?: Record<string, boolean>): void {
-        if (!this.trackingEnabled) return;
-        const analyticsEvent = { ...this.createBaseEvent('page', integrations), name, properties };
+        if (!this.trackingEnabled || !this.consentGiven) {
+            this.logDebug('Event not queued due to missing consent:', name || 'page view');
+            return;
+        }
+        const mergedProperties = { ...this.globalProperties, ...properties };
+        const analyticsEvent = { 
+            ...this.createBaseEvent('page', integrations), 
+            name, 
+            properties: mergedProperties,
+            payload: mergedProperties 
+        };
         this.enqueueEvent(analyticsEvent);
     }
 
     public identify(userId: string, traits?: UserTraits, integrations?: Record<string, boolean>): void {
-        if (!this.trackingEnabled) return;
+        if (!this.trackingEnabled || !this.consentGiven) {
+            this.logDebug('Event not queued due to missing consent: identify', userId);
+            return;
+        }
         this.userId = userId;
         this.userTraits = { ...this.userTraits, ...traits };
         this.savePersistentData(); // Persistir userId e userTraits
@@ -333,6 +375,67 @@ class AnalyticsSDK {
     public setGlobalProperties(properties: EventProperties): void {
         this.globalProperties = { ...this.globalProperties, ...properties };
         this.logDebug('Global properties set:', this.globalProperties);
+    }
+
+    public getGlobalProperties(): EventProperties {
+        return { ...this.globalProperties };
+    }
+
+    // --- Métodos Adicionais de Conveniência --- //
+    
+    /**
+     * Alias para track() - mantém compatibilidade com README
+     */
+    public captureEvent(event: string, properties?: EventProperties, integrations?: Record<string, boolean>): void {
+        this.track(event, properties, integrations);
+    }
+
+    /**
+     * Alias para page() - mantém compatibilidade com README
+     */
+    public capturePageView(name?: string, properties?: EventProperties, integrations?: Record<string, boolean>): void {
+        this.page(name, properties, integrations);
+    }
+
+    /**
+     * Alias para identify() - mantém compatibilidade com README
+     */
+    public identifyUser(userId: string, traits?: UserTraits, integrations?: Record<string, boolean>): void {
+        this.identify(userId, traits, integrations);
+    }
+
+    /**
+     * Rastreia erros como eventos
+     */
+    public trackError(error: Error, properties?: EventProperties, integrations?: Record<string, boolean>): void {
+        this.track('error', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            ...properties
+        }, integrations);
+    }
+
+    /**
+     * Rastreia métricas de performance
+     */
+    public trackPerformance(metricName: string, value: number, properties?: EventProperties, integrations?: Record<string, boolean>): void {
+        this.track('performance_metric', {
+            metricName,
+            value,
+            ...properties
+        }, integrations);
+    }
+
+    /**
+     * Retorna informações do usuário atual
+     */
+    public getCurrentUser(): UserInfo {
+        return {
+            userId: this.userId,
+            anonymousId: this.anonymousId,
+            traits: { ...this.userTraits }
+        };
     }
 
     // --- Gerenciamento de Middleware --- //
@@ -366,11 +469,41 @@ class AnalyticsSDK {
         this.consentGiven = false;
         this.disableTracking();
         this.clearPersistentData(); // Opcional: limpar dados persistentes ao revogar consentimento
+        // Clear user data from memory as well
+        this.userId = null;
+        this.userTraits = {};
         this.logDebug('Consent revoked. Tracking disabled and persistent data cleared.');
     }
 
     public hasConsent(): boolean {
         return this.consentGiven;
+    }
+
+    /**
+     * Atualiza preferências de consentimento granular
+     */
+    public updateConsent(preferences: ConsentPreferences): void {
+        this.consentPreferences = { ...this.consentPreferences, ...preferences };
+        
+        // Se pelo menos uma categoria está granted, damos consentimento geral
+        const hasAnyGranted = Object.values(this.consentPreferences).some(
+            status => status === ConsentStatus.GRANTED
+        );
+        
+        if (hasAnyGranted && !this.consentGiven) {
+            this.giveConsent();
+        } else if (!hasAnyGranted && this.consentGiven) {
+            this.revokeConsent();
+        }
+        
+        this.logDebug('Consent preferences updated:', this.consentPreferences);
+    }
+
+    /**
+     * Retorna o status de consentimento atual
+     */
+    public getConsentStatus(): ConsentPreferences {
+        return { ...this.consentPreferences };
     }
 
     // --- Controle de Rastreamento --- //
@@ -397,12 +530,15 @@ class AnalyticsSDK {
     // --- Utilitários --- //
     private logDebug(...args: any[]): void {
         if (this.debug) {
-            console.log(`[AnalyticsSDK Debug]`, ...args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            console.log(`[AnalyticsSDK Debug] ${message}`);
         }
     }
 
     public shutdown(): void {
-        this.logDebug("\nShutting down Analytics SDK: Flushing remaining events and stopping timer...");
+        this.logDebug("Shutting down Analytics SDK: Flushing remaining events and stopping timer...");
         this.flushEvents();
         this.stopFlushTimer();
         this.logDebug("Analytics SDK shutdown complete.");
@@ -413,8 +549,3 @@ class AnalyticsSDK {
 // Para executar este exemplo, você precisará de um ambiente Node.js e instalar 'uuid':
 // npm install uuid
 // ts-node analytics-sdk.ts
-
-
-
-export { AnalyticsSDK, AnalyticsEvent, EventProperties, UserTraits, GroupTraits, Context, MiddlewareFunction, Plugin };
-
