@@ -210,22 +210,28 @@ class AnalyticsSDK {
         };
     }
     track(event, properties, integrations) {
-        if (!this.trackingEnabled)
+        if (!this.trackingEnabled || !this.consentGiven) {
+            this.logDebug('Event not queued due to missing consent:', event);
             return;
+        }
         const mergedProperties = Object.assign(Object.assign({}, this.globalProperties), properties);
         const analyticsEvent = Object.assign(Object.assign({}, this.createBaseEvent('track', integrations)), { event, properties: mergedProperties, payload: mergedProperties });
         this.enqueueEvent(analyticsEvent);
     }
     page(name, properties, integrations) {
-        if (!this.trackingEnabled)
+        if (!this.trackingEnabled || !this.consentGiven) {
+            this.logDebug('Event not queued due to missing consent:', name || 'page view');
             return;
+        }
         const mergedProperties = Object.assign(Object.assign({}, this.globalProperties), properties);
         const analyticsEvent = Object.assign(Object.assign({}, this.createBaseEvent('page', integrations)), { name, properties: mergedProperties, payload: mergedProperties });
         this.enqueueEvent(analyticsEvent);
     }
     identify(userId, traits, integrations) {
-        if (!this.trackingEnabled)
+        if (!this.trackingEnabled || !this.consentGiven) {
+            this.logDebug('Event not queued due to missing consent: identify', userId);
             return;
+        }
         this.userId = userId;
         this.userTraits = Object.assign(Object.assign({}, this.userTraits), traits);
         this.savePersistentData(); // Persistir userId e userTraits
@@ -329,6 +335,9 @@ class AnalyticsSDK {
         this.consentGiven = false;
         this.disableTracking();
         this.clearPersistentData(); // Opcional: limpar dados persistentes ao revogar consentimento
+        // Clear user data from memory as well
+        this.userId = null;
+        this.userTraits = {};
         this.logDebug('Consent revoked. Tracking disabled and persistent data cleared.');
     }
     hasConsent() {
@@ -381,7 +390,7 @@ class AnalyticsSDK {
         }
     }
     shutdown() {
-        this.logDebug("\nShutting down Analytics SDK: Flushing remaining events and stopping timer...");
+        this.logDebug("Shutting down Analytics SDK: Flushing remaining events and stopping timer...");
         this.flushEvents();
         this.stopFlushTimer();
         this.logDebug("Analytics SDK shutdown complete.");
