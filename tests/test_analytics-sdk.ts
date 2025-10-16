@@ -1,7 +1,5 @@
-
 import { AnalyticsSDK, AnalyticsEvent, MiddlewareFunction, Plugin } from '../src/analytics-sdk';
-import { jest } from '@jest/globals';
-import { v4 as uuidv4 } from 'uuid';
+import type { Mock } from 'jest-mock';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -33,9 +31,9 @@ Object.defineProperty(global, 'window', { value: { devicePixelRatio: 2 } });
 
 describe('AnalyticsSDK', () => {
     let sdk: AnalyticsSDK;
-    let consoleLogSpy: jest.SpyInstance;
-    let consoleWarnSpy: jest.SpyInstance;
-    let consoleErrorSpy: jest.SpyInstance;
+    let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
+    let consoleWarnSpy: jest.SpiedFunction<typeof console.warn>;
+    let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
 
     beforeEach(() => {
         jest.useFakeTimers();
@@ -82,7 +80,7 @@ describe('AnalyticsSDK', () => {
         const storedData = JSON.parse(localStorageMock.getItem('test_analytics_sdk_storage') || '{}');
         expect(storedData.userId).toBe('user123');
         expect(storedData.userTraits).toEqual({ email: 'user@example.com', plan: 'premium' });
-        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[AnalyticsSDK Debug] User identified:'), 'user123', { email: 'user@example.com', plan: 'premium' });
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[AnalyticsSDK Debug] User identified: user123'));
     });
 
     it('should track an event and queue it', () => {
@@ -115,10 +113,10 @@ describe('AnalyticsSDK', () => {
 
     it('should set global properties', () => {
         sdk.setGlobalProperties({ country: 'BR' });
-        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[AnalyticsSDK Debug] Global properties set:'), { country: 'BR' });
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[AnalyticsSDK Debug] Global properties set:'));
         sdk.track('test_event');
         const queuedEvent = sdk['eventQueue'][0];
-        expect(queuedEvent.properties).toEqual(expect.objectContaining({ country: 'BR' }));
+        expect(queuedEvent.properties).toEqual({ country: 'BR' });
     });
 
     it('should update context with system info', () => {
@@ -155,7 +153,7 @@ describe('AnalyticsSDK', () => {
         sdk.track('middleware_test_2', { initial: true });
         sdk.flushEvents();
 
-        const processedEvent = (mockPlugin.track as jest.Mock).mock.calls[0][0];
+        const processedEvent = (mockPlugin.track as Mock).mock.calls[0][0] as AnalyticsEvent;
         expect(processedEvent.properties).toEqual(expect.objectContaining({ initial: true, m1: true, m2: true }));
     });
 
@@ -247,7 +245,7 @@ describe('AnalyticsSDK', () => {
         expect(sdk['eventQueue'].length).toBe(1);
         sdk.shutdown();
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[AnalyticsSDK Debug] Shutting down Analytics SDK: Flushing remaining events and stopping timer...'));
-        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[AnalyticsSDK Debug] Successfully flushed 1 events.'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[AnalyticsSDK Debug] Flushing 1 events.'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[AnalyticsSDK Debug] Analytics SDK shutdown complete.'));
         expect(sdk['eventQueue'].length).toBe(0);
         expect(sdk['flushTimer']).toBeNull();

@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "demo:advanced": "ts-node ./examples/advanced-example.ts"
+    "test:coverage": "jest --coverage",
+    "demo:advanced": "ts-node ./examples/advanced-example.ts",
+    "lint": "echo 'No linter configured'"
   },
   "keywords": [],
   "author": "Gabriel Demetrios Lafis",
@@ -21,6 +23,6 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "uuid": "^13.0.0"
+    "uuid": "^9.0.1"
   }
 }
