@@ -6,7 +6,6 @@
 ![Mermaid](https://img.shields.io/badge/Diagrams-Mermaid-orange?style=for-the-badge&logo=mermaid&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
 ![Code Coverage](https://img.shields.io/badge/Coverage-80.5%25-brightgreen?style=for-the-badge)
-![Build Status](https://github.com/galafis/typescript-enterprise-analytics-sdk/workflows/CI%2FCD%20Pipeline/badge.svg?style=for-the-badge)
 ![Last Commit](https://img.shields.io/github/last-commit/galafis/typescript-enterprise-analytics-sdk?style=for-the-badge)
 
 ---
